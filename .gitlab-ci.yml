@@ -1,0 +1,47 @@
+stages:
+  - deploy
+
+variables:
+  SSH_USER: "usuario_remoto"
+  SSH_HOST: "homolog"
+  SSH_PORT: 22
+  HOMOLOG_DIR: "/homologacao"
+  PROD_DIR: "/producao"
+
+before_script:
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+
+deploy_homolog:
+  stage: deploy
+  script:
+    - echo "Deploying to homolog server..."
+    - rsync -avz --delete -e "ssh -p $SSH_PORT" ./ $SSH_USER@$SSH_HOST:$HOMOLOG_DIR
+  only:
+    - develop
+
+deploy_prod:
+  stage: deploy
+  script:
+    - echo "Deploying to production server..."
+    - rsync -avz --delete -e "ssh -p $SSH_PORT" ./ $SSH_USER@$SSH_HOST:$PROD_DIR
+  only:
+    - main
+
+# Botões manuais para disparar os deploys
+manual_hmlg:
+  stage: deploy
+  script:
+    - echo "Manual deploy to homolog server..."
+    - rsync -avz --delete -e "ssh -p $SSH_PORT" ./ $SSH_USER@$SSH_HOST:$HOMOLOG_DIR
+  when: manual
+
+manual_prod:
+  stage: deploy
+  script:
+    - echo "Manual deploy to production server..."
+    - rsync -avz --delete -e "ssh -p $SSH_PORT" ./ $SSH_USER@$SSH_HOST:$PROD_DIR
+  when: manual
